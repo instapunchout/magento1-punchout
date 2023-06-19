@@ -1,0 +1,30 @@
+<?xml version="1.0"?>
+<config>
+    <modules>
+        <Vurbis_Punchout>
+            <version>0.1.0</version>
+        </Vurbis_Punchout>
+    </modules>
+    <frontend>
+        <routers>
+            <punchout>
+                <use>standard</use>
+                <args>
+                    <module>InstaPunchout_Punchout</module>
+                    <frontName>punchout</frontName>
+                </args>
+            </punchout>
+        </routers>
+        <events>
+            <controller_front_send_response_before>
+                <observers>
+                    <Vurbis_Punchout_Model_Observer>
+                        <type>singleton</type>
+                        <class>InstaPunchout_Punchout_Model_Observer</class>
+                        <method>addScript</method>
+                    </Vurbis_Punchout_Model_Observer>
+                </observers>
+            </controller_front_send_response_before>
+        </events>
+    </frontend>
+</config>
