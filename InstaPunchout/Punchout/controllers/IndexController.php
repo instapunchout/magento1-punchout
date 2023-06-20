@@ -287,6 +287,11 @@ class InstaPunchout_Punchout_IndexController extends Mage_Core_Controller_Front_
             $item['product_data'] = $product->getData();
             $options = Mage::helper('catalog/product_configuration')->getCustomOptions($item);
             $item['options'] = $options;
+            $staff_model = Mage::getModel('staff/staff');
+            if ($staff_model) {
+                $staff = $staff_model->load((int) $item['staff_id']);
+                $item['staff'] = json_decode(Mage::helper('core')->jsonEncode($staff), true);
+            }
         }
         $data = json_decode(Mage::helper('core')->jsonEncode($cartItems), true);
         $data['currency'] = Mage::app()->getStore()->getCurrentCurrencyCode();
