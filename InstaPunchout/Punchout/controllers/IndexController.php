@@ -15,29 +15,6 @@ class InstaPunchout_Punchout_IndexController extends Mage_Core_Controller_Front_
 
     private function getOptions()
     {
-        /*        $staff_model = Mage::getModel('staff/staff');
-        echo "foudn";
-        //die("");
-                if($staff_model) {
-                        $staff = $staff_model->load(20774);//$data['staff_id']);
-                        echo json_encode([
-                                'name' => $staff['name'],
-                    'surname' => $staff['surname'],
-                                'number' => $staff['number'],
-                        ]);
-                }
-                die("");
-        $res= Mage::getModel('staff/staff')->load(20774);// $modules = Mage::getConfig()->getNode('modules')->children();
-        echo json_encode($res['name'] $);
-        die("");
-        try {
-        die("hi");
-        $res = Mage::getModel('equip/staff')->load(20774);
-        echo var_dump($res);
-        die("");
-        } catch($e) {
-        echo var_dump($e);
-        }*/
         // get websites
         $websites = Mage::app()->getWebsites();
         $websiteOptions = array();
@@ -285,6 +262,7 @@ class InstaPunchout_Punchout_IndexController extends Mage_Core_Controller_Front_
         foreach ($cartItems as $item) {
             $product = Mage::getModel('catalog/product')->load($item->product_id);
             $item['product_data'] = $product->getData();
+            $item['buy'] = json_decode(Mage::helper('core')->jsonEncode($item->getBuyRequest()));
             $options = Mage::helper('catalog/product_configuration')->getCustomOptions($item);
             $item['options'] = $options;
             $staff_model = Mage::getModel('staff/staff');
@@ -295,20 +273,6 @@ class InstaPunchout_Punchout_IndexController extends Mage_Core_Controller_Front_
         }
         $data = json_decode(Mage::helper('core')->jsonEncode($cartItems), true);
         $data['currency'] = Mage::app()->getStore()->getCurrentCurrencyCode();
-        //       $data['attributes'] = $attributes;
-///$staff = Mage::getModel('staff/staff')->load((int)$staffId);
-//        $data['staff'] = json_decode(Mage::helper('core')->jsonEncode($staff), true);
-        $staff_model = Mage::getModel('staff/staff');
-        if ($staff_model) {
-            $staffId = Mage::getSingleton('customer/session')->getSelectedStaffId();
-            $staff = $staff_model->load((int) $staffId);
-            $data['staff'] = json_decode(Mage::helper('core')->jsonEncode($staff), true);
-            /*                $data['custom'] = [
-                                    'staff_name' => $staff['name'],
-                                    'staff_surname' => $staff['surname'],
-                                    'staff_number' => $staff['number'],
-                            ];*/
-        }
         return $data;
     }
     private function prepareCustomer($res)
@@ -533,12 +497,25 @@ class InstaPunchout_Punchout_IndexController extends Mage_Core_Controller_Front_
                     ->setBody(Mage::helper('core')->jsonEncode(['error' => 'Required field product or sku']));
                 return;
             }
-            $options = new Varien_Object();
-            $options->setData($item);
 
-            $quote->addProduct($product, $options);
+            // custom: get staff id for equipsolution
+            $staff_id = false;
+            if (isset($item['staff_id'])) {
+                $staff_id = $item['staff_id'];
+                unset($item['staff_id']);
+            }
+
+            $options = new Varien_Object($item);
+            $quote_item = $quote->addProduct($product, $options);
+
+            if ($staff_id) {
+                $quote_item->setStaffId($staff_id);
+                if ($quote_item->getParentItem()) {
+                    $quote_item->getParentItem()->setStaffId($staff_id);
+                }
+            }
+
         }
-
 
         // Add billing address to quote
         $billingAddressData = $quote->getBillingAddress()->addData($data['billing']);
@@ -568,7 +545,7 @@ class InstaPunchout_Punchout_IndexController extends Mage_Core_Controller_Front_
 
         // Set payment method for the quote
         $quote->getPayment()->importData(array('method' => $paymentMethod));
-
+        $quote->getPayment()->setPoNumber($data['po']);
         //        die('getPayment');
         $shippingAddressData->setShippingMethod($shippingMethod)
             ->setCollectShippingRates(true)->collectShippingRates()->setShippingMethod($shippingMethod);
@@ -602,6 +579,17 @@ class InstaPunchout_Punchout_IndexController extends Mage_Core_Controller_Front_
          * See saveOrder() function of app/code/core/Mage/Checkout/Onepage.php
          */
 
-        echo json_encode(['id' => $incrementId]);
+        $order = Mage::getModel('sales/order')->loadByIncrementId($incrementId);
+        $order->setData('state', "complete");
+        $order->setStatus("complete");
+        $history = $order->addStatusHistoryComment('Order was set to Complete by punchout.', false);
+        $history->setIsCustomerNotified(false);
+        $order->save();
+
+
+        $result['id'] = $incrementId;
+
+        // Show response
+        echo Mage::helper('core')->jsonEncode($result);
     }
 }
