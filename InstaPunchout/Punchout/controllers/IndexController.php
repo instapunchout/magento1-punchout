@@ -328,6 +328,22 @@ class InstaPunchout_Punchout_IndexController extends Mage_Core_Controller_Front_
         }
         ;
 
+        if (isset($res['account_id'])) {
+            $accountId = $res['account_id'];
+            $parentCustomer = Mage::getModel('customer/customer')
+                ->getCollection()
+                ->addAttributeToSelect('*')
+                ->addFieldToFilter('erp_account_id', $accountId)
+                ->getFirstItem();
+            if (!$parentCustomer->getId()) {
+                die("Parent customer not found with erp_account_id " . $accountId);
+            }
+            $customer->setData('parent_customer', $accountId);
+            $customer->setData('parent_erp_account_id', $accountId);
+            $customer->setData('parent_customer_id', $parentCustomer->getEntityId());
+            $updated = true;
+        }
+
         if ($res['properties']['roles']) {
             $customer->setRoles($res['properties']['roles']);
             $updated = true;
