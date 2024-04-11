@@ -1,0 +1,9 @@
+<?xml version="1.0"?>
+<config>
+    <modules>
+        <InstaPunchout_Punchout>
+            <active>true</active>
+            <codePool>local</codePool>
+        </InstaPunchout_Punchout>
+    </modules>
+</config>
