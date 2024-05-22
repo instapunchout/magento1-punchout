@@ -44,15 +44,18 @@ class InstaPunchout_Punchout_IndexController extends Mage_Core_Controller_Front_
             );
         }
         // get roles
-        $roles = Mage::getModel('equip_customer/role')->getCollection();
         $roleOptions = array();
-        foreach ($roles as $role) {
-            $roleOptions[] = array(
-                'value' => $role->getId(),
-                'label' => $role->getName(),
-                'website_id' => $role->getWebsiteId(),
-                'description' => $role->getDescription()
-            );
+        $roles_model = Mage::getModel('equip_customer/role');
+        if ($roles_model) {
+            $roles = Mage::getModel('equip_customer/role')->getCollection();
+            foreach ($roles as $role) {
+                $roleOptions[] = array(
+                    'value' => $role->getId(),
+                    'label' => $role->getName(),
+                    'website_id' => $role->getWebsiteId(),
+                    'description' => $role->getDescription()
+                );
+            }
         }
 
         // get payment methods
@@ -307,13 +310,18 @@ class InstaPunchout_Punchout_IndexController extends Mage_Core_Controller_Front_
             $action = $request->getParam('action');
 
             if ($action == 'options.json') {
+                $this->authorize();
                 $response = $this->getOptions();
             } else if ($action == 'script') {
                 $this->scriptAction();
                 exit;
             } else if ($action == 'order.json') {
+                $this->authorize();
                 $this->orderAction();
                 exit;
+            } else if ($action == 'invoices.json') {
+                $this->authorize();
+                $response = $this->getInvoices();
             } else {
 
                 // no need for further sanization as we need to capture all the server data as is
@@ -531,9 +539,9 @@ class InstaPunchout_Punchout_IndexController extends Mage_Core_Controller_Front_
          */
 
         $order = Mage::getModel('sales/order')->loadByIncrementId($incrementId);
-        $order->setData('state', "complete");
-        $order->setStatus("complete");
-        $history = $order->addStatusHistoryComment('Order was set to Complete by punchout.', false);
+        $order->setData('state', $data['status']);
+        $order->setStatus($data['status']);
+        $history = $order->addStatusHistoryComment('Order was set to ' . $data['status'] . ' by punchout.', false);
         $history->setIsCustomerNotified(false);
         $order->save();
 
@@ -542,5 +550,32 @@ class InstaPunchout_Punchout_IndexController extends Mage_Core_Controller_Front_
 
         // Show response
         echo Mage::helper('core')->jsonEncode($result);
+    }
+
+    private function authorize()
+    {
+        $authorization_header = $this->getRequest()->getParam('authorization_header');
+        $res = $this->post('https://punchout.cloud/authorize', ["authorization" => $authorization_header]);
+        if ($res["authorized"] !== true) {
+            echo json_encode(["error" => "You're not authorized", "error_data" => $res]);
+            exit;
+        }
+    }
+
+    private function getInvoices()
+    {
+        $order_increment_id = $this->getRequest()->getParam('order_increment_id');
+        $order = Mage::getModel('sales/order')->loadByIncrementId($order_increment_id);
+        $invoices = $order->getInvoiceCollection();
+        $data = [];
+        foreach ($invoices as $invoice) {
+            $invoice_data = $invoice->getData();
+            $invoice_data['items'] = [];
+            foreach ($invoice->getItemsCollection() as $item) {
+                $invoice_data['items'][] = $item->getData();
+            }
+            $data[] = $invoice_data;
+        }
+        return $data;
     }
 }
