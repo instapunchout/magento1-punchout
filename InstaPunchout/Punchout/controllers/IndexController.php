@@ -309,7 +309,13 @@ class InstaPunchout_Punchout_IndexController extends Mage_Core_Controller_Front_
 
             $action = $request->getParam('action');
 
-            if ($action == 'options.json') {
+            if ($action == 'product') {
+                $sku = $request->getParam('sku');
+                $product = Mage::getModel('catalog/product')->loadByAttribute('sku', $sku);
+                $url = $product->getProductUrl();
+                $this->_redirectUrl($url);
+                return;
+            } else if ($action == 'options.json') {
                 $this->authorize();
                 $response = $this->getOptions();
             } else if ($action == 'script') {
@@ -473,6 +479,11 @@ class InstaPunchout_Punchout_IndexController extends Mage_Core_Controller_Front_
                     $quote_item->getParentItem()->setStaffId($staff_id);
                 }
             }
+
+            if (isset($item['price'])) {
+                $quote_item->setCustomPrice($item['price']);
+            }
+
 
         }
 
