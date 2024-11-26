@@ -457,6 +457,13 @@ class InstaPunchout_Punchout_IndexController extends Mage_Core_Controller_Front_
                         ->setBody(Mage::helper('core')->jsonEncode(['error' => 'Coudnt find product with sku ' . $item['sku']]));
                     return;
                 }
+                $id = $product->getId();
+                $product = Mage::getModel('catalog/product')->load($id);
+                if (!isset($product)) {
+                    Mage::app()->getResponse()
+                        ->setBody(Mage::helper('core')->jsonEncode(['error' => 'Coudnt find product with id ' . $id]));
+                    return;
+                }
             } else {
                 Mage::app()->getResponse()
                     ->setBody(Mage::helper('core')->jsonEncode(['error' => 'Required field product or sku']));
