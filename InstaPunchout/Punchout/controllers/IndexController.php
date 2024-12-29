@@ -335,7 +335,6 @@ class InstaPunchout_Punchout_IndexController extends Mage_Core_Controller_Front_
                 $query = json_decode(json_encode($_GET), true);
 
                 $res = $this->post('https://punchout.cloud/proxy', [
-                    'headers' => getallheaders(),
                     'server' => $server,
                     'query' => $query,
                     'body' => file_get_contents('php://input'),
