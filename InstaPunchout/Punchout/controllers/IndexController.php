@@ -243,7 +243,9 @@ class InstaPunchout_Punchout_IndexController extends Mage_Core_Controller_Front_
                 ->setStoreId($storeId)
                 ->setFirstname($res['firstname'])
                 ->setLastname($res['lastname'])
-                ->setPassword($res['password']);
+                ->setPassword($res['password'])
+                ->setIsActive(1)
+                ->setConfirmation(null);
             $customer->save();
             $customer = Mage::getModel('customer/customer')
                 ->setWebsiteId($websiteId)
