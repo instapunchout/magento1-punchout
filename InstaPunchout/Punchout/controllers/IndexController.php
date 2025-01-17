@@ -252,9 +252,9 @@ class InstaPunchout_Punchout_IndexController extends Mage_Core_Controller_Front_
                 ->loadByEmail($email);
         }
         
-        if(!$customer->getData('customer_activated')) {
+        if (!$customer->getData('customer_activated')) {
             $customer->setData('customer_activated', 1);
-            $customer->setData('confirmation', 1);
+            $customer->setConfirmation(null);
             $updated = true;
         }
         
