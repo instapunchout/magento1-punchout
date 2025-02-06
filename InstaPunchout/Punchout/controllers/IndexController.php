@@ -251,13 +251,13 @@ class InstaPunchout_Punchout_IndexController extends Mage_Core_Controller_Front_
                 ->setWebsiteId($websiteId)
                 ->loadByEmail($email);
         }
-        
+
         if (!$customer->getData('customer_activated')) {
             $customer->setData('customer_activated', 1);
             $customer->setConfirmation(null);
             $updated = true;
         }
-        
+
         if (isset($res['store_id'])) {
             $customer->setStoreId($res['store_id']);
             $updated = true;
@@ -524,8 +524,15 @@ class InstaPunchout_Punchout_IndexController extends Mage_Core_Controller_Front_
             ->collectShippingRates();
 
         // Set shipping and payment method on quote shipping address data
-        $shippingAddressData->setShippingMethod($shippingMethod)
-            ->setPaymentMethod($paymentMethod)->setCollectShippingRates(true)->save();
+        $shippingAddress = $shippingAddressData->setShippingMethod($shippingMethod);
+
+        $shippingCost = $data['shipping_cost'];
+        if ($shippingMethod == 'flatrate_flatrate') {
+            $shippingAddress->setShippingAmount($shippingCost);
+            $shippingAddress->setBaseShippingAmount($shippingCost);
+        }
+
+        $shippingAddress->setPaymentMethod($paymentMethod)->setCollectShippingRates(true)->collectTotals()->save();
 
         // Set payment method for the quote
         $quote->getPayment()->importData(array('method' => $paymentMethod));
