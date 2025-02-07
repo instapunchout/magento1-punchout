@@ -586,7 +586,10 @@ class InstaPunchout_Punchout_IndexController extends Mage_Core_Controller_Front_
 
     private function authorize()
     {
-        $authorization_header = $this->getRequest()->getParam('authorization_header');
+        $authorization_header = Mage::app()->getRequest()->getHeader('Authorization');
+        if (empty($authorization_header)) {
+            $authorization_header = Mage::app()->getRequest()->getParam('authorization_header');
+        }
         $res = $this->post('https://punchout.cloud/authorize', ["authorization" => $authorization_header]);
         if ($res["authorized"] !== true) {
             echo json_encode(["error" => "You're not authorized", "error_data" => $res]);
@@ -597,16 +600,32 @@ class InstaPunchout_Punchout_IndexController extends Mage_Core_Controller_Front_
     private function getInvoices()
     {
         $order_increment_id = $this->getRequest()->getParam('order_increment_id');
-        $order = Mage::getModel('sales/order')->loadByIncrementId($order_increment_id);
-        $invoices = $order->getInvoiceCollection();
-        $data = [];
-        foreach ($invoices as $invoice) {
-            $invoice_data = $invoice->getData();
-            $invoice_data['items'] = [];
-            foreach ($invoice->getItemsCollection() as $item) {
-                $invoice_data['items'][] = $item->getData();
+        $order_increment_ids = [];
+        if (empty($order_increment_id)) {
+            $order_increment_ids = $this->getRequest()->getParam('order_increment_ids');
+            if (empty($order_increment_ids)) {
+                echo json_encode(["error" => "order_increment_id or order_increment_ids is required"]);
+                exit;
             }
-            $data[] = $invoice_data;
+            $order_increment_ids = explode(",", $order_increment_ids);
+
+        } else {
+            $order_increment_ids[] = $order_increment_id;
+        }
+        $data = [];
+
+        foreach ($order_increment_ids as $order_increment_id) {
+            $order = Mage::getModel('sales/order')->loadByIncrementId((int) $order_increment_id);
+            $invoices = $order->getInvoiceCollection();
+            foreach ($invoices as $invoice) {
+                $invoice_data = $invoice->getData();
+                $invoice_data['items'] = [];
+                foreach ($invoice->getItemsCollection() as $item) {
+                    $invoice_data['items'][] = $item->getData();
+                }
+                $invoice_data['order_increment_id'] = $order_increment_id;
+                $data[] = $invoice_data;
+            }
         }
         return $data;
     }
