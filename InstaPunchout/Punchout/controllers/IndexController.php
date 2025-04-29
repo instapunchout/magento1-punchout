@@ -356,7 +356,9 @@ class InstaPunchout_Punchout_IndexController extends Mage_Core_Controller_Front_
                     $session->setPunchoutId($res['punchout_id']);
 
                     $this->clearCart();
-
+                    if (isset($res['redirect'])) {
+                        return $this->_redirectUrl($res['redirect']);
+                    }
                     return $this->_redirect('/');
                 } else {
                     $response = ["error" => "unknown action", "response" => $res];
